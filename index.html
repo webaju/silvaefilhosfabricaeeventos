@@ -321,6 +321,26 @@ document.querySelectorAll('[data-carrossel]').forEach(box => {
   window.addEventListener('pointermove', e => { if (baixo) faixa.scrollLeft = s0 - (e.clientX - x0); });
   window.addEventListener('pointerup', () => { if (!baixo) return; baixo = false; faixa.classList.remove('arrastando'); atualizar(); });
   atualizar();
+
+  /* Passagem automática: avança um card a cada poucos segundos e volta ao início no fim.
+     Pausa quando a pessoa toca, arrasta, passa o mouse ou quando o carrossel sai da tela. */
+  const reduzir = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let pausado = false, visivel = false, ate = 0;
+  const adiar = () => { ate = Date.now() + 8000; };
+  const cabe = () => faixa.scrollWidth <= faixa.clientWidth + 8;
+  function avancar(){
+    if (pausado || !visivel || Date.now() < ate || cabe()) return;
+    const fim = faixa.scrollLeft + faixa.clientWidth >= faixa.scrollWidth - 8;
+    fim ? faixa.scrollTo({left:0, behavior:'smooth'}) : faixa.scrollBy({left:passo(), behavior:'smooth'});
+  }
+  ['pointerdown','touchstart','wheel','keydown'].forEach(ev => faixa.addEventListener(ev, adiar, {passive:true}));
+  [prev, next, ...bolinhas].forEach(el => el.addEventListener('click', adiar));
+  box.addEventListener('mouseenter', () => pausado = true);
+  box.addEventListener('mouseleave', () => pausado = false);
+  box.addEventListener('focusin', () => pausado = true);
+  box.addEventListener('focusout', () => pausado = false);
+  new IntersectionObserver(([e]) => visivel = e.isIntersecting, {threshold:.4}).observe(box);
+  if (!reduzir) setInterval(avancar, 3200 + Math.random()*600);
 });
 
 document.querySelectorAll('img[data-foto]').forEach(i => i.src = FOTOS[i.dataset.foto] || i.dataset.foto);
